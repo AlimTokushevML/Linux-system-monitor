@@ -11,8 +11,9 @@ import (
 var processes []ProcInfo
 
 type ProcInfo struct {
-	Name string
-	CPU  float64
+	PID         int
+	Name        string
+	Consumption map[ResourceType]float64
 }
 
 func findProcesses() {
@@ -26,17 +27,33 @@ func findProcesses() {
 
 func storeProcesses(procs []*process.Process) {
 	for _, p := range procs {
-		cpu, err := p.CPUPercent()
-		name, _ := p.Name()
-		if err == nil {
-			processes = append(processes, ProcInfo{name, cpu})
+		var newProcInfo ProcInfo
+		var err error
+
+		newProcInfo.PID = int(p.Pid)
+		newProcInfo.Consumption = make(map[ResourceType]float64) // ← fix
+
+		newProcInfo.Name, err = p.Name()
+		if err != nil {
+			continue
 		}
+		newProcInfo.Consumption[CPU], err = p.CPUPercent()
+		if err != nil {
+			continue
+		}
+		memInfo, err := p.MemoryInfo()
+		if err != nil {
+			continue
+		}
+		newProcInfo.Consumption[RAM] = float64(memInfo.RSS)
+
+		processes = append(processes, newProcInfo)
 	}
 }
 
-func sortProcesses(procs []ProcInfo) []ProcInfo {
+func sortProcesses(procs []ProcInfo, rt ResourceType) []ProcInfo {
 	slices.SortFunc(procs, func(a, b ProcInfo) int {
-		return cmp.Compare(b.CPU, a.CPU)
+		return cmp.Compare(b.Consumption[rt], a.Consumption[rt])
 	})
 	return procs
 }
