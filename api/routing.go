@@ -6,14 +6,21 @@ import (
 	"github.com/shirou/gopsutil/v3/cpu"
 )
 
+type ResourceType int
+
+const (
+	CPU ResourceType = iota
+	RAM
+)
+
 func UpdateMonitor() {
 	findProcesses()
 }
 
-func GetHeadProcesses(n int) []ProcInfo {
+func GetHeadProcesses(n int, rt ResourceType) []ProcInfo {
 	var procInfoList []ProcInfo
 
-	for i, p := range sortProcesses(processes) {
+	for i, p := range sortProcesses(processes, rt) {
 		if i >= 10 {
 			break
 		}
