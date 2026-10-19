@@ -1,8 +1,9 @@
 package api
 
 import (
+	"cmp"
 	"log"
-	"sort"
+	"slices"
 
 	"github.com/shirou/gopsutil/v3/process"
 )
@@ -16,10 +17,14 @@ type ProcInfo struct {
 
 func findProcesses() {
 	procs, err := process.Processes()
+	processes = processes[:0]
 	if err != nil {
 		log.Fatal("Failed to retrieve the processes")
 	}
+	storeProcesses(procs)
+}
 
+func storeProcesses(procs []*process.Process) {
 	for _, p := range procs {
 		cpu, err := p.CPUPercent()
 		name, _ := p.Name()
@@ -29,8 +34,9 @@ func findProcesses() {
 	}
 }
 
-func sortProcesses() {
-	sort.Slice(processes, func(i, j int) bool {
-		return processes[i].CPU > processes[j].CPU
+func sortProcesses(procs []ProcInfo) []ProcInfo {
+	slices.SortFunc(procs, func(a, b ProcInfo) int {
+		return cmp.Compare(b.CPU, a.CPU)
 	})
+	return procs
 }
