@@ -44,8 +44,9 @@ func storeProcesses(procs []*process.Process) {
 		memInfo, err := p.MemoryInfo()
 		if err != nil {
 			newProcInfo.Consumption[RAM] = 0
+		} else {
+			newProcInfo.Consumption[RAM] = float64(memInfo.RSS)
 		}
-		newProcInfo.Consumption[RAM] = float64(memInfo.RSS)
 
 		processes = append(processes, newProcInfo)
 	}
