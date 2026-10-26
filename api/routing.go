@@ -22,7 +22,7 @@ func GetHeadProcesses(n int, rt ResourceType) []ProcInfo {
 	var procInfoList []ProcInfo
 
 	for i, p := range sortProcesses(processes, rt) {
-		if i >= 10 {
+		if i >= n {
 			break
 		}
 		procInfoList = append(procInfoList, p)
