@@ -35,15 +35,15 @@ func storeProcesses(procs []*process.Process) {
 
 		newProcInfo.Name, err = p.Name()
 		if err != nil {
-			continue
+			newProcInfo.Name = "Failed to retrieve the process"
 		}
 		newProcInfo.Consumption[CPU], err = p.CPUPercent()
 		if err != nil {
-			continue
+			newProcInfo.Consumption[CPU] = 0
 		}
 		memInfo, err := p.MemoryInfo()
 		if err != nil {
-			continue
+			newProcInfo.Consumption[RAM] = 0
 		}
 		newProcInfo.Consumption[RAM] = float64(memInfo.RSS)
 
