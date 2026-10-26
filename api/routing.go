@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/shirou/gopsutil/v3/cpu"
+	"github.com/shirou/gopsutil/v3/mem"
 )
 
 type ResourceType int
@@ -29,10 +30,26 @@ func GetHeadProcesses(n int, rt ResourceType) []ProcInfo {
 	return procInfoList
 }
 
-func GetTotalCPU() float64 {
+func GetUsageCPU() float64 {
 	percentage, err := cpu.Percent(time.Second, false)
 	if err != nil {
 		panic("Failed to get CPU usage")
 	}
 	return percentage[0]
+}
+
+func GetUsageRAM() float64 {
+	info, err := mem.VirtualMemory()
+	if err != nil {
+		panic("Failed to get total RAM")
+	}
+	return info.UsedPercent
+}
+
+func GetTotalRAM() float64 {
+	info, err := mem.VirtualMemory()
+	if err != nil {
+		panic("Failed to get RAM usage")
+	}
+	return float64(info.Available)
 }
