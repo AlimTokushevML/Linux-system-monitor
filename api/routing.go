@@ -19,6 +19,18 @@ const (
 	NET
 )
 
+func (rt ResourceType) String() string {
+	switch rt {
+	case CPU:
+		return "CPU"
+	case RAM:
+		return "RAM"
+	case NET:
+		return "NET"
+	}
+	return "unknown"
+}
+
 type Snapshot struct {
 	CPUPercent     float64
 	RAMUsedPercent float64
