@@ -1,14 +1,8 @@
 package api
 
 import (
-	"cmp"
-	"log"
-	"slices"
-
 	"github.com/shirou/gopsutil/v3/process"
 )
-
-var processes []ProcInfo
 
 type ProcInfo struct {
 	PID         int
@@ -16,22 +10,22 @@ type ProcInfo struct {
 	Consumption map[ResourceType]float64
 }
 
-func findProcesses() {
+func findProcesses() ([]ProcInfo, error) {
 	procs, err := process.Processes()
-	processes = processes[:0]
 	if err != nil {
-		log.Fatal("Failed to retrieve the processes")
+		return nil, err
 	}
-	storeProcesses(procs)
+	return collectProcesses(procs), nil
 }
 
-func storeProcesses(procs []*process.Process) {
+func collectProcesses(procs []*process.Process) []ProcInfo {
+	result := make([]ProcInfo, 0, len(procs))
 	for _, p := range procs {
 		var newProcInfo ProcInfo
 		var err error
 
 		newProcInfo.PID = int(p.Pid)
-		newProcInfo.Consumption = make(map[ResourceType]float64) // ← fix
+		newProcInfo.Consumption = make(map[ResourceType]float64)
 
 		newProcInfo.Name, err = p.Name()
 		if err != nil {
@@ -48,13 +42,7 @@ func storeProcesses(procs []*process.Process) {
 			newProcInfo.Consumption[RAM] = float64(memInfo.RSS)
 		}
 
-		processes = append(processes, newProcInfo)
+		result = append(result, newProcInfo)
 	}
-}
-
-func sortProcesses(procs []ProcInfo, rt ResourceType) []ProcInfo {
-	slices.SortFunc(procs, func(a, b ProcInfo) int {
-		return cmp.Compare(b.Consumption[rt], a.Consumption[rt])
-	})
-	return procs
+	return result
 }
