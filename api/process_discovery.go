@@ -8,6 +8,7 @@ type ProcInfo struct {
 	PID         int
 	Name        string
 	Consumption map[ResourceType]float64
+	Net         NetUsage
 }
 
 func findProcesses() ([]ProcInfo, error) {
