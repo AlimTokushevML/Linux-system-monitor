@@ -34,7 +34,7 @@ var (
 	netTrack netTracker
 )
 
-func UpdateMonitor() error {
+func updateMonitor() error {
 	updateMu.Lock()
 	defer updateMu.Unlock()
 
@@ -72,7 +72,7 @@ func UpdateMonitor() error {
 }
 
 func Start(interval time.Duration) (stop func()) {
-	_ = UpdateMonitor()
+	_ = updateMonitor()
 
 	done := make(chan struct{})
 	go func() {
@@ -83,7 +83,7 @@ func Start(interval time.Duration) (stop func()) {
 			case <-done:
 				return
 			case <-ticker.C:
-				_ = UpdateMonitor()
+				_ = updateMonitor()
 			}
 		}
 	}()
