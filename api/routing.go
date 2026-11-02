@@ -3,6 +3,7 @@ package api
 import (
 	"cmp"
 	"slices"
+	"sync"
 	"sync/atomic"
 	"time"
 
@@ -15,6 +16,7 @@ type ResourceType int
 const (
 	CPU ResourceType = iota
 	RAM
+	NET
 )
 
 type Snapshot struct {
@@ -27,7 +29,15 @@ type Snapshot struct {
 
 var current atomic.Pointer[Snapshot]
 
+var (
+	updateMu sync.Mutex
+	netTrack netTracker
+)
+
 func UpdateMonitor() error {
+	updateMu.Lock()
+	defer updateMu.Unlock()
+
 	procs, err := findProcesses()
 	if err != nil {
 		return err
@@ -39,6 +49,16 @@ func UpdateMonitor() error {
 	vm, err := mem.VirtualMemory()
 	if err != nil {
 		return err
+	}
+
+	if socks, err := readNetSockets(); err == nil {
+		usage := netTrack.update(socks, time.Now())
+		for i := range procs {
+			u := usage[procs[i].PID]
+			u.Available = true
+			procs[i].Net = u
+			procs[i].Consumption[NET] = u.Down + u.Up
+		}
 	}
 
 	current.Store(&Snapshot{
