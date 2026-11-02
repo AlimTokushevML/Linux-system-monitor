@@ -1,6 +1,9 @@
 package api
 
 import (
+	"cmp"
+	"slices"
+	"sync/atomic"
 	"time"
 
 	"github.com/shirou/gopsutil/v3/cpu"
@@ -14,42 +17,70 @@ const (
 	RAM
 )
 
-func UpdateMonitor() {
-	findProcesses()
+type Snapshot struct {
+	CPUPercent     float64
+	RAMUsedPercent float64
+	RAMTotal       float64
+	Processes      []ProcInfo
+	Taken          time.Time
 }
 
-func GetHeadProcesses(n int, rt ResourceType) []ProcInfo {
-	var procInfoList []ProcInfo
+var current atomic.Pointer[Snapshot]
 
-	for i, p := range sortProcesses(processes, rt) {
-		if i >= 10 {
-			break
+func UpdateMonitor() error {
+	procs, err := findProcesses()
+	if err != nil {
+		return err
+	}
+	cpuPercent, err := cpu.Percent(time.Second, false)
+	if err != nil {
+		return err
+	}
+	vm, err := mem.VirtualMemory()
+	if err != nil {
+		return err
+	}
+
+	current.Store(&Snapshot{
+		CPUPercent:     cpuPercent[0],
+		RAMUsedPercent: vm.UsedPercent,
+		RAMTotal:       float64(vm.Total),
+		Processes:      procs,
+		Taken:          time.Now(),
+	})
+	return nil
+}
+
+func Start(interval time.Duration) (stop func()) {
+	_ = UpdateMonitor()
+
+	done := make(chan struct{})
+	go func() {
+		ticker := time.NewTicker(interval)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-done:
+				return
+			case <-ticker.C:
+				_ = UpdateMonitor()
+			}
 		}
-		procInfoList = append(procInfoList, p)
-	}
-	return procInfoList
+	}()
+	return func() { close(done) }
 }
 
-func GetUsageCPU() float64 {
-	percentage, err := cpu.Percent(time.Second, false)
-	if err != nil {
-		panic("Failed to get CPU usage")
+func GetSnapshot() *Snapshot {
+	if s := current.Load(); s != nil {
+		return s
 	}
-	return percentage[0]
+	return &Snapshot{}
 }
 
-func GetUsageRAM() float64 {
-	info, err := mem.VirtualMemory()
-	if err != nil {
-		panic("Failed to get total RAM")
-	}
-	return info.UsedPercent
-}
-
-func GetTotalRAM() float64 {
-	info, err := mem.VirtualMemory()
-	if err != nil {
-		panic("Failed to get RAM usage")
-	}
-	return float64(info.Available)
+func (s *Snapshot) Top(n int, rt ResourceType) []ProcInfo {
+	sorted := slices.Clone(s.Processes)
+	slices.SortFunc(sorted, func(a, b ProcInfo) int {
+		return cmp.Compare(b.Consumption[rt], a.Consumption[rt])
+	})
+	return sorted[:max(0, min(n, len(sorted)))]
 }
