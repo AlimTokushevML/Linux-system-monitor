@@ -48,6 +48,16 @@ func (p ProcInfo) FormatConsumption(rt ResourceType) string {
 			return "n/a"
 		}
 		return "↓ " + FormatRate(p.Net.Down) + "  ↑ " + FormatRate(p.Net.Up)
+	case NETDown:
+		if !p.Net.Available {
+			return "n/a"
+		}
+		return FormatRate(p.Net.Down)
+	case NETUp:
+		if !p.Net.Available {
+			return "n/a"
+		}
+		return FormatRate(p.Net.Up)
 	}
 	return ""
 }
