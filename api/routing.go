@@ -16,7 +16,9 @@ type ResourceType int
 const (
 	CPU ResourceType = iota
 	RAM
-	NET
+	NET     // download + upload, bytes per second
+	NETDown // download, bytes per second
+	NETUp   // upload, bytes per second
 )
 
 func (rt ResourceType) String() string {
@@ -27,6 +29,10 @@ func (rt ResourceType) String() string {
 		return "RAM"
 	case NET:
 		return "NET"
+	case NETDown:
+		return "NET DOWN"
+	case NETUp:
+		return "NET UP"
 	}
 	return "unknown"
 }
@@ -70,6 +76,8 @@ func updateMonitor() error {
 			u.Available = true
 			procs[i].Net = u
 			procs[i].Consumption[NET] = u.Down + u.Up
+			procs[i].Consumption[NETDown] = u.Down
+			procs[i].Consumption[NETUp] = u.Up
 		}
 	}
 
@@ -109,10 +117,24 @@ func GetSnapshot() *Snapshot {
 	return &Snapshot{}
 }
 
-func (s *Snapshot) Top(n int, rt ResourceType) []ProcInfo {
+// Sorted returns all processes ordered by their usage of rt: highest first
+// when desc is true, lowest first otherwise. Ties are ordered by PID so the
+// list doesn't jitter between refreshes. It returns a new slice and does not
+// modify the snapshot.
+func (s *Snapshot) Sorted(rt ResourceType, desc bool) []ProcInfo {
 	sorted := slices.Clone(s.Processes)
 	slices.SortFunc(sorted, func(a, b ProcInfo) int {
-		return cmp.Compare(b.Consumption[rt], a.Consumption[rt])
+		byUsage := cmp.Compare(a.Consumption[rt], b.Consumption[rt])
+		if desc {
+			byUsage = -byUsage
+		}
+		return cmp.Or(byUsage, cmp.Compare(a.PID, b.PID))
 	})
+	return sorted
+}
+
+// Top returns up to n processes with the highest usage of rt, highest first.
+func (s *Snapshot) Top(n int, rt ResourceType) []ProcInfo {
+	sorted := s.Sorted(rt, true)
 	return sorted[:max(0, min(n, len(sorted)))]
 }
