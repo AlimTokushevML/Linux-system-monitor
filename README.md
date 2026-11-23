@@ -14,3 +14,7 @@ I want to be a Full stack developer, since in my opinion, this is the safest bet
 ## Alimzhan
 
 Want to be forward deployed engineer - talking with business customers and clients to build AI/ML solutions for them. Technique skills + facing clients, discuss their company context, demands - from integration to deployment
+
+# How to use this thing?
+
+Just git clone to linux lmfao and run the binary-for-linux. I hope I don't need to explain chmod +x, and yes if you don't trust my binary, you need to install go language and build it yourself with go build.
